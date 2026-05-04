@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>プリコネ 未所持チェッカー</title>
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0d0a1a; --surface:#17112e; --card:#1f1740;
+  --border:#3a2d6a; --pink:#ff6eb0; --purple:#a56eff;
+  --gold:#ffd166; --cyan:#6ef0ff; --green:#5affa0;
+  --text:#e8d8ff; --muted:#7a6a9a; --radius:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'M PLUS Rounded 1c',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:60px}
+
+header{background:linear-gradient(135deg,#1a0f35,#2a1258,#1a0f35);border-bottom:2px solid var(--border);padding:22px 20px 14px;text-align:center;position:relative;overflow:hidden}
+header::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 80% at 50% 120%,rgba(165,110,255,.18),transparent 70%)}
+header h1{font-size:1.75rem;font-weight:900;background:linear-gradient(90deg,var(--pink),var(--purple),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:.04em;margin-bottom:3px}
+header p{color:var(--muted);font-size:.76rem}
+
+.save-banner{display:none;background:#1a1535;border-bottom:1px solid var(--border);padding:7px 14px;font-size:.76rem;color:var(--muted);align-items:center;gap:10px;justify-content:center}
+.save-banner.visible{display:flex}
+.save-banner strong{color:var(--purple)}
+.btn-sm{padding:3px 9px;border-radius:12px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:.7rem;cursor:pointer;font-family:inherit}
+.btn-sm:hover{border-color:var(--pink)}
+
+.icon-bar{display:none;background:#140e28;border-bottom:1px solid var(--border);padding:7px 14px;font-size:.73rem;color:var(--muted);align-items:center;gap:10px}
+.icon-bar.visible{display:flex}
+.prog-wrap{flex:1;background:#2a1a50;border-radius:4px;height:4px}
+.prog-fill{height:4px;border-radius:4px;background:linear-gradient(90deg,var(--purple),var(--pink));transition:width .3s}
+
+.container{max-width:1200px;margin:0 auto;padding:0 14px}
+
+.drop-zone{margin:22px 0 0;border:2px dashed var(--border);border-radius:var(--radius);padding:30px 20px;text-align:center;cursor:pointer;background:var(--surface);position:relative;transition:all .2s}
+.drop-zone:hover,.drop-zone.drag-over{border-color:var(--purple);background:#1f1848}
+.drop-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
+.drop-icon{font-size:2rem;margin-bottom:7px}
+.drop-label{color:var(--purple);font-weight:700;font-size:.88rem}
+.drop-sub{color:var(--muted);font-size:.73rem;margin-top:3px}
+
+.stats-bar{display:none;margin:14px 0 0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;gap:14px;flex-wrap:wrap;align-items:center}
+.stats-bar.visible{display:flex}
+.stat-item{display:flex;flex-direction:column;align-items:center}
+.stat-num{font-size:1.4rem;font-weight:900}
+.stat-num.pink{color:var(--pink)}.stat-num.purple{color:var(--purple)}.stat-num.gold{color:var(--gold)}.stat-num.green{color:var(--green)}
+.stat-label{font-size:.66rem;color:var(--muted);margin-top:1px}
+.stat-sep{width:1px;height:34px;background:var(--border)}
+.fname{margin-left:auto;background:var(--card);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:.7rem;color:var(--muted);max-width:210px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.filter-bar{display:none;margin:10px 0 0;gap:7px;flex-wrap:wrap;align-items:center}
+.filter-bar.visible{display:flex}
+.filter-label{font-size:.73rem;color:var(--muted)}
+.btn{padding:5px 13px;border-radius:20px;border:1.5px solid transparent;font-family:inherit;font-size:.76rem;font-weight:700;cursor:pointer;transition:all .15s}
+.btn-filter{background:var(--card);border-color:var(--border);color:var(--muted)}
+.btn-filter.active{background:var(--purple);border-color:var(--purple);color:#fff;box-shadow:0 0 10px rgba(165,110,255,.4)}
+.btn-filter:hover:not(.active){border-color:var(--purple);color:var(--text)}
+.btn-danger{background:transparent;border-color:rgba(255,110,176,.4);color:var(--pink)}
+.btn-danger:hover{border-color:var(--pink);background:rgba(255,110,176,.08)}
+.search-wrap{margin-left:auto;position:relative}
+.search-wrap input{background:var(--card);border:1.5px solid var(--border);border-radius:20px;padding:5px 11px 5px 28px;color:var(--text);font-family:inherit;font-size:.76rem;outline:none;width:150px;transition:border-color .15s}
+.search-wrap input:focus{border-color:var(--purple)}
+.search-wrap::before{content:'🔍';position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:.68rem;pointer-events:none}
+
+.grid-section{display:none;margin:16px 0 0}
+.grid-section.visible{display:block}
+.section-title{font-size:.72rem;font-weight:700;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:9px;display:flex;align-items:center;gap:7px}
+.section-title::after{content:'';flex:1;height:1px;background:var(--border)}
+.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:7px}
+
+.char-card{background:var(--card);border:1.5px solid var(--border);border-radius:var(--radius);padding:9px 6px 8px;text-align:center;transition:all .18s;position:relative;cursor:pointer;user-select:none;animation:fadeIn .22s ease both}
+.char-card:hover{transform:translateY(-2px)}
+.char-card.missing{border-color:rgba(255,110,176,.3)}
+.char-card.missing:hover{border-color:var(--pink);box-shadow:0 4px 16px rgba(255,110,176,.2)}
+.char-card.cr0{border-color:rgba(165,110,255,.3)}
+.char-card.cr0:hover{border-color:var(--purple);box-shadow:0 4px 16px rgba(165,110,255,.2)}
+.char-card.acquired{opacity:.4;filter:grayscale(.7);border-style:dashed}
+.char-card.acquired:hover{opacity:.65}
+
+.acq-btn{position:absolute;top:4px;right:4px;width:18px;height:18px;border-radius:50%;border:1px solid var(--border);background:var(--surface);font-size:.62rem;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2;transition:all .15s;color:var(--muted)}
+.char-card:hover .acq-btn{border-color:var(--green);color:var(--green)}
+.char-card.acquired .acq-btn{background:var(--green);border-color:var(--green);color:#0d2a1f}
+
+.avatar{width:58px;height:58px;border-radius:50%;margin:0 auto 6px;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;position:relative;z-index:1}
+.avatar .fb{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:1.25rem;font-weight:900;border-radius:50%}
+.avatar.missing-av{background:linear-gradient(135deg,#3a1a2e,#5a1a3e);border:2px solid rgba(255,110,176,.4)}
+.avatar.cr0-av{background:linear-gradient(135deg,#1a1a3e,#2a1a5e);border:2px solid rgba(165,110,255,.4)}
+.char-name{font-size:.65rem;font-weight:700;line-height:1.3;word-break:break-all}
+.char-badge{display:inline-block;margin-top:4px;padding:2px 6px;border-radius:10px;font-size:.56rem;font-weight:700}
+.badge-missing{background:rgba(255,110,176,.2);color:var(--pink)}
+.badge-cr0{background:rgba(165,110,255,.2);color:var(--purple)}
+.badge-acquired{background:rgba(90,255,160,.15);color:var(--green)}
+.sp-dot{position:absolute;top:3px;right:4px;width:7px;height:7px;border-radius:50%;background:var(--gold);box-shadow:0 0 5px var(--gold);z-index:3}
+
+.empty-state{display:none;text-align:center;padding:50px 20px;color:var(--muted)}
+.empty-state.visible{display:block}
+.tip{margin:12px 0 0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:9px 13px;font-size:.73rem;color:var(--muted)}
+
+@keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+footer{margin-top:40px;text-align:center;color:var(--muted);font-size:.68rem}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>✦ プリコネ 未所持チェッカー ✦</h1>
+  <p>CSVを読み込んで未所持・CR0キャラを管理 — データはブラウザに保存されます</p>
+</header>
+
+<div class="save-banner" id="saveBanner">
+  <span>💾 保存済みデータ &nbsp;<strong id="savedDate"></strong></span>
+  <button class="btn-sm" onclick="promptNewLoad()">📂 CSV再読込</button>
+  <button class="btn-sm" onclick="clearAll()">🗑 リセット</button>
+</div>
+
+<div class="icon-bar" id="iconBar">
+  <span>🖼 アイコンデータ構築中...</span>
+  <div class="prog-wrap"><div class="prog-fill" id="iconProg" style="width:0%"></div></div>
+  <span id="iconProgText">0%</span>
+</div>
+
+<div class="container">
+
+  <div class="drop-zone" id="dropZone">
+    <input type="file" id="fileInput" accept="text/csv,text/plain,text/*,.csv,*/*">
+    <div class="drop-icon">📂</div>
+    <div class="drop-label">CSVファイルをドロップ or クリックして選択</div>
+    <div class="drop-sub">pricone_sheet_import_*.csv に対応</div>
+  </div>
+
+  <div class="stats-bar" id="statsBar">
+    <div class="stat-item"><span class="stat-num pink" id="statMissing">0</span><span class="stat-label">未所持</span></div>
+    <div class="stat-sep"></div>
+    <div class="stat-item"><span class="stat-num purple" id="statCr0">0</span><span class="stat-label">CR0</span></div>
+    <div class="stat-sep"></div>
+    <div class="stat-item"><span class="stat-num green" id="statAcq">0</span><span class="stat-label">手動取得済</span></div>
+    <div class="stat-sep"></div>
+    <div class="stat-item"><span class="stat-num gold" id="statTotal">0</span><span class="stat-label">全キャラ</span></div>
+    <div class="fname" id="fname"></div>
+  </div>
+
+  <div class="filter-bar" id="filterBar">
+    <span class="filter-label">表示：</span>
+    <button class="btn btn-filter active" data-f="missing" onclick="setFilter('missing')">未所持</button>
+    <button class="btn btn-filter" data-f="cr0"     onclick="setFilter('cr0')">CR0</button>
+    <button class="btn btn-filter" data-f="all"     onclick="setFilter('all')">未所持＋CR0</button>
+    <button class="btn btn-filter" data-f="acq"     onclick="setFilter('acq')">✓取得済み</button>
+    <button class="btn btn-danger"                  onclick="promptNewLoad()">📂 CSV更新</button>
+    <div class="search-wrap"><input type="text" id="searchInput" placeholder="名前で絞り込み" oninput="render()"></div>
+  </div>
+
+  <div class="grid-section" id="missingSection">
+    <div class="section-title" id="missingTitle">未所持キャラ</div>
+    <div class="card-grid" id="missingGrid"></div>
+  </div>
+  <div class="grid-section" id="cr0Section">
+    <div class="section-title" id="cr0Title">CR0（所持・未強化）</div>
+    <div class="card-grid" id="cr0Grid"></div>
+  </div>
+  <div class="grid-section" id="acqSection">
+    <div class="section-title" id="acqTitle">手動取得済み</div>
+    <div class="card-grid" id="acqGrid"></div>
+  </div>
+
+  <div class="empty-state" id="emptyState">
+    <div style="font-size:2.5rem;margin-bottom:10px">🔍</div>
+    <div>該当キャラが見つかりません</div>
+  </div>
+
+  <div class="tip" id="tip" style="display:none">
+    💡 カードをクリック（または右上の ✓）で「取得済み」マーク → 「✓取得済み」タブで管理できます<br>
+    💾 CSVは自動保存されるので次回から読み込み不要です。アイコン画像は初回のみ自動取得されます。
+  </div>
+</div>
+
+<footer>データはlocalStorageに保存されます。外部送信なし。</footer>
+
+<script>
+// ─── Constants ───────────────────────────────────────────
+const STILL_BASE = 'https://spugn.github.io/priconne-quest-helper/images/unit_still/';
+const CHAR_LIST  = 'https://spugn.github.io/priconne-quest-helper/characters';
+const CHAR_PAGE  = 'https://spugn.github.io/priconne-quest-helper/characters/';
+
+const LS = {
+  chars:   'pricone_v2_chars',
+  meta:    'pricone_v2_meta',
+  ovr:     'pricone_v2_overrides',
+  imap:    'pricone_v2_icon_map',
+  its:     'pricone_v2_icon_ts',
+};
+
+// ─── State ───────────────────────────────────────────────
+let allChars  = [];
+let overrides = {};
+let iconMap   = {};
+let curFilter = 'missing';
+
+// ─── Init ────────────────────────────────────────────────
+(function init() {
+  load(LS.chars,  v => allChars  = v, []);
+  load(LS.ovr,    v => overrides = v, {});
+  load(LS.imap,   v => iconMap   = v, {});
+
+  const meta = JSON.parse(localStorage.getItem(LS.meta) || 'null');
+
+  if (allChars.length) {
+    hideDrop();
+    showBanner(meta);
+    showData(meta);
+  }
+
+  // Build icon map if stale
+  const ts = parseInt(localStorage.getItem(LS.its) || '0');
+  if (Date.now() - ts > 23 * 3600 * 1000 || !Object.keys(iconMap).length) {
+    buildIconMap();
+  }
+})();
+
+function load(key, setter, def) {
+  try { setter(JSON.parse(localStorage.getItem(key) || JSON.stringify(def))); }
+  catch(e) { setter(def); }
+}
+
+// ─── File loading ─────────────────────────────────────────
+document.getElementById('fileInput').addEventListener('change', e => {
+  if (e.target.files[0]) readFile(e.target.files[0]);
+});
+const dz = document.getElementById('dropZone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.classList.remove('drag-over');
+  if (e.dataTransfer.files[0]) readFile(e.dataTransfer.files[0]);
+});
+
+function readFile(file) {
+  const r = new FileReader();
+  r.onload = e => parseCSV(e.target.result, file.name);
+  r.readAsText(file, 'UTF-8');
+}
+
+function parseCSV(text, filename) {
+  text = text.replace(/^\uFEFF/, '');
+  const lines = text.trim().split('\n').map(l => l.trim()).filter(Boolean);
+  if (lines.length < 2) return alert('行数が少なすぎます');
+
+  const hdr  = lines[0].split(',').map(h => h.trim());
+  const iN   = hdr.indexOf('キャラ名');
+  const iCR  = hdr.indexOf('コネクトランク');
+  const iSP  = hdr.indexOf('専用SP');
+  if (iN < 0 || iCR < 0) return alert('"キャラ名"と"コネクトランク"列が必要です');
+
+  const totalAll = lines.length - 1;
+  allChars = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    const c   = lines[i].split(',');
+    const name = c[iN]?.trim() || '';
+    const cr   = c[iCR]?.trim() || '';
+    const sp   = c[iSP]?.trim() || 'なし';
+    if (!name) continue;
+    const status = cr === '未所持' ? 'missing' : cr === '0' ? 'cr0' : 'owned';
+    if (status !== 'owned') allChars.push({ name, cr, sp, status });
+  }
+
+  // Clean overrides
+  const valid = new Set(allChars.map(c => c.name));
+  for (const k of Object.keys(overrides)) if (!valid.has(k)) delete overrides[k];
+
+  const meta = { filename, date: new Date().toLocaleDateString('ja-JP'), totalAll };
+  localStorage.setItem(LS.chars, JSON.stringify(allChars));
+  localStorage.setItem(LS.meta,  JSON.stringify(meta));
+  localStorage.setItem(LS.ovr,   JSON.stringify(overrides));
+
+  hideDrop();
+  showBanner(meta);
+  showData(meta);
+}
+
+// ─── UI helpers ──────────────────────────────────────────
+function hideDrop() { document.getElementById('dropZone').style.display = 'none'; }
+
+function showBanner(meta) {
+  document.getElementById('saveBanner').classList.add('visible');
+  if (meta) document.getElementById('savedDate').textContent =
+    meta.filename + '　(' + meta.date + ')';
+}
+
+function showData(meta) {
+  document.getElementById('statsBar').classList.add('visible');
+  document.getElementById('filterBar').classList.add('visible');
+  document.getElementById('tip').style.display = '';
+  updateStats();
+  render();
+}
+
+function updateStats() {
+  const meta = JSON.parse(localStorage.getItem(LS.meta) || '{}');
+  document.getElementById('statMissing').textContent = allChars.filter(c => eff(c) === 'missing').length;
+  document.getElementById('statCr0').textContent     = allChars.filter(c => eff(c) === 'cr0').length;
+  document.getElementById('statAcq').textContent     = allChars.filter(c => eff(c) === 'acquired').length;
+  document.getElementById('statTotal').textContent   = meta.totalAll || '?';
+  document.getElementById('fname').textContent       = meta.filename || '';
+}
+
+function eff(c) { return overrides[c.name] || c.status; }
+
+// ─── Filter ──────────────────────────────────────────────
+function setFilter(f) {
+  curFilter = f;
+  document.querySelectorAll('.btn-filter').forEach(b =>
+    b.classList.toggle('active', b.dataset.f === f));
+  render();
+}
+
+// ─── Render ──────────────────────────────────────────────
+function render() {
+  if (!allChars.length) return;
+  const q = document.getElementById('searchInput').value.trim();
+
+  function match(c) {
+    const st = eff(c);
+    const mq = !q || c.name.includes(q);
+    if (!mq) return false;
+    if (curFilter === 'missing') return st === 'missing';
+    if (curFilter === 'cr0')     return st === 'cr0';
+    if (curFilter === 'all')     return st === 'missing' || st === 'cr0';
+    if (curFilter === 'acq')     return st === 'acquired';
+    return false;
+  }
+
+  const list = allChars.filter(match);
+  const byStatus = s => list.filter(c => eff(c) === s);
+
+  paintSection('missingSection','missingGrid','missingTitle','未所持キャラ',         byStatus('missing'));
+  paintSection('cr0Section',    'cr0Grid',    'cr0Title',    'CR0（所持・未強化）',  byStatus('cr0'));
+  paintSection('acqSection',    'acqGrid',    'acqTitle',    '手動取得済み',         byStatus('acquired'));
+
+  const any = list.length > 0;
+  document.getElementById('emptyState').classList.toggle('visible', !any && allChars.length > 0);
+}
+
+function paintSection(secId, gridId, titleId, base, chars) {
+  const sec  = document.getElementById(secId);
+  const grid = document.getElementById(gridId);
+  grid.innerHTML = '';
+  if (!chars.length) { sec.classList.remove('visible'); return; }
+  sec.classList.add('visible');
+  document.getElementById(titleId).textContent = `${base}（${chars.length}体）`;
+  chars.forEach((c, i) => {
+    const card = makeCard(c);
+    card.style.animationDelay = `${Math.min(i * 12, 280)}ms`;
+    grid.appendChild(card);
+  });
+}
+
+// ─── Card ─────────────────────────────────────────────────
+function makeCard(c) {
+  const st   = eff(c);
+  const card = document.createElement('div');
+  card.className = `char-card ${st}`;
+
+  // SP dot
+  if (c.sp === 'あり') {
+    const dot = document.createElement('div');
+    dot.className = 'sp-dot'; dot.title = '専用SP所持';
+    card.appendChild(dot);
+  }
+
+  // Acquire button
+  const acqBtn = document.createElement('div');
+  acqBtn.className = 'acq-btn';
+  acqBtn.textContent = '✓';
+  acqBtn.title = st === 'acquired' ? '取得を解除' : '取得済みにマーク';
+  acqBtn.onclick = e => { e.stopPropagation(); toggle(c); };
+  card.appendChild(acqBtn);
+
+  // Avatar
+  const avClass = st === 'acquired' ? 'cr0' : st;
+  const av = document.createElement('div');
+  av.className = `avatar ${avClass}-av`;
+
+  // Fallback letter (always behind)
+  const fb = document.createElement('div');
+  fb.className = 'fb';
+  fb.textContent = c.name.charAt(0) || '？';
+  fb.style.color = nameHue(c.name);
+  av.appendChild(fb);
+
+  // Try icon image
+  const uid = iconMap[c.name];
+  if (uid) {
+    const img = document.createElement('img');
+    img.src   = STILL_BASE + uid + '.png';
+    img.alt   = c.name;
+    img.style.cssText = 'position:relative;z-index:1';
+    img.onerror = () => img.remove();
+    av.appendChild(img);
+  }
+
+  // Name & badge
+  const nameEl = document.createElement('div');
+  nameEl.className = 'char-name';
+  nameEl.textContent = c.name;
+
+  const badge = document.createElement('div');
+  const bmap  = { missing:'未所持', cr0:'CR0', acquired:'取得済' };
+  const bcls  = { missing:'badge-missing', cr0:'badge-cr0', acquired:'badge-acquired' };
+  badge.className = `char-badge ${bcls[st] || 'badge-cr0'}`;
+  badge.textContent = bmap[st] || st;
+
+  card.appendChild(av);
+  card.appendChild(nameEl);
+  card.appendChild(badge);
+  card.onclick = () => toggle(c);
+  return card;
+}
+
+function nameHue(name) {
+  let h = 0; for (const c of name) h = (h*31 + c.charCodeAt(0)) & 0xffffffff;
+  return `hsl(${Math.abs(h)%360},65%,65%)`;
+}
+
+// ─── Toggle acquired ──────────────────────────────────────
+function toggle(c) {
+  if (eff(c) === 'acquired') delete overrides[c.name];
+  else overrides[c.name] = 'acquired';
+  localStorage.setItem(LS.ovr, JSON.stringify(overrides));
+  updateStats();
+  render();
+}
+
+// ─── Prompt / Reset ──────────────────────────────────────
+function promptNewLoad() {
+  document.getElementById('dropZone').style.display = '';
+  document.getElementById('dropZone').scrollIntoView({ behavior:'smooth' });
+  document.getElementById('fileInput').value = '';
+}
+function clearAll() {
+  if (!confirm('保存データをすべて削除しますか？（アイコンデータは保持）')) return;
+  [LS.chars, LS.meta, LS.ovr].forEach(k => localStorage.removeItem(k));
+  allChars = []; overrides = {};
+  document.getElementById('saveBanner').classList.remove('visible');
+  document.getElementById('statsBar').classList.remove('visible');
+  document.getElementById('filterBar').classList.remove('visible');
+  document.getElementById('tip').style.display = 'none';
+  ['missingSection','cr0Section','acqSection'].forEach(id =>
+    document.getElementById(id).classList.remove('visible'));
+  document.getElementById('emptyState').classList.remove('visible');
+  document.getElementById('dropZone').style.display = '';
+}
+
+// ─── Icon map builder ─────────────────────────────────────
+async function buildIconMap() {
+  const bar   = document.getElementById('iconBar');
+  const fill  = document.getElementById('iconProg');
+  const label = document.getElementById('iconProgText');
+  bar.classList.add('visible');
+
+  try {
+    // Fetch character list to get all unit_ids
+    const listHtml = await fetch(CHAR_LIST).then(r => r.text());
+    // unit_ids appear as alt="100101" in img tags
+    const ids = [...new Set(
+      [...listHtml.matchAll(/alt="(\d{6})"/g)].map(m => m[1])
+    )];
+    if (!ids.length) throw new Error('no ids found');
+
+    const map  = { ...iconMap };
+    let done   = 0;
+    const BATCH = 12;
+
+    for (let i = 0; i < ids.length; i += BATCH) {
+      const batch = ids.slice(i, i + BATCH);
+      await Promise.all(batch.map(async uid => {
+        try {
+          const html = await fetch(CHAR_PAGE + uid).then(r => r.text());
+          // Title: "キャラ名 (unit_id) | priconne-quest-helper"
+          const m = html.match(/<title>(.+?) \(\d+\)/);
+          if (m && m[1]) map[m[1].trim()] = uid;
+        } catch(e){}
+        done++;
+        const pct = Math.round(done / ids.length * 100);
+        fill.style.width  = pct + '%';
+        label.textContent = pct + '%';
+      }));
+    }
+
+    iconMap = map;
+    localStorage.setItem(LS.imap, JSON.stringify(iconMap));
+    localStorage.setItem(LS.its,  Date.now().toString());
+    bar.classList.remove('visible');
+    if (allChars.length) render(); // re-render with icons
+
+  } catch(e) {
+    console.warn('Icon map build failed:', e.message);
+    bar.classList.remove('visible');
+  }
+}
+</script>
+</body>
+</html>
